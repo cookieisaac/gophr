@@ -11,6 +11,8 @@ var (
 	errUsernameExists = ValidationError(errors.New("That username is taken"))
 	errEmailExists = ValidationError(errors.New("That email address has an account"))
 	errCredentialsIncorrect = ValidationError(errors.New("We couldn't find a user with supplied username and password combination"))
+	errOldPasswordIncorrect = ValidationError(errors.New("Old password is incorrect"))
+	errNewPasswordNotMatch = ValidationError(errors.New("New password does not match. Enter new password and confirm again."))
 )
 
 func IsValidationError(err error) bool {
