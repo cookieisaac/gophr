@@ -1,13 +1,29 @@
 package main
 
-import (
-	"net/http"
-)
+import "net/http"
 
 type Middleware []http.Handler
 
 func (m *Middleware) Add(handler http.Handler) {
 	*m = append(*m, handler)
+}
+
+func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Wrap the supplied ResponseWriter
+	mw := NewMiddlewareResponseWriter(w)
+
+	// Loop through all of the registered handlers
+	for _, handler := range m {
+		// Call the handler with our MiddlewareResponseWriter
+		handler.ServeHTTP(mw, r)
+
+		// If there was a write, stop processing
+		if mw.written {
+			return
+		}
+	}
+	// If no handlers wrote to the response, it’s a 404
+	http.NotFound(w, r)
 }
 
 type MiddlewareResponseWriter struct {
@@ -29,19 +45,4 @@ func (w *MiddlewareResponseWriter) Write(bytes []byte) (int, error) {
 func (w *MiddlewareResponseWriter) WriteHeader(code int) {
 	w.written = true
 	w.ResponseWriter.WriteHeader(code)
-}
-
-func (m Middleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	mw := NewMiddlewareResponseWriter(w)
-
-	for _, handler := range m {
-		handler.ServeHTTP(mw, r)
-
-		if mw.written {
-			return
-		}
-	}
-
-	// if no handler wrote to the response, it's 404
-	http.NotFound(w, r)
 }

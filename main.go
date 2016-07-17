@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 
@@ -9,32 +8,33 @@ import (
 )
 
 func main() {
+	router := NewRouter()
 
-	unauthenticatedRouter := NewRouter()
-	unauthenticatedRouter.GET("/", HandleHome)
-	unauthenticatedRouter.GET("/register", HandleUserNew)
+	router.Handle("GET", "/", HandleHome)
+	router.Handle("GET", "/register", HandleUserNew)
+	router.Handle("POST", "/register", HandleUserCreate)
+	router.Handle("GET", "/login", HandleSessionNew)
+	router.Handle("POST", "/login", HandleSessionCreate)
+	
+	router.ServeFiles(
+		"/assets/*filepath",
+		http.Dir("assets/"),
+	)
 
-	authenticatedRouter := NewRouter()
-	authenticatedRouter.GET("/images/new", HandleImageNew)
-
+	secureRouter := NewRouter()
+	secureRouter.Handle("GET", "/sign-out", HandleSessionDestroy)
+	
 	middleware := Middleware{}
-	middleware.Add(unauthenticatedRouter)
-	middleware.Add(http.HandlerFunc(AuthenticateRequest))
-	middleware.Add(authenticatedRouter)
-
-	http.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("assets/"))))
-	fmt.Println("listening on :3000")
+	middleware.Add(router)
+	middleware.Add(http.HandlerFunc(RequireLogin))
+	middleware.Add(secureRouter)
+	
 	log.Fatal(http.ListenAndServe(":3000", middleware))
 }
 
-type NotFound struct{}
-
-func (n *NotFound) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-}
-
+// Creates a new router
 func NewRouter() *httprouter.Router {
 	router := httprouter.New()
-	notFound := new(NotFound)
-	router.NotFound = notFound
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})
 	return router
 }
