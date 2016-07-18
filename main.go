@@ -3,9 +3,35 @@ package main
 import (
 	"log"
 	"net/http"
-
+	"fmt"
 	"github.com/julienschmidt/httprouter"
 )
+
+func init() {
+	// Assign a user store
+	store, err := NewFileUserStore("./data/users.json")
+	if err != nil {
+		panic(fmt.Errorf("Error creating user store: %s", err))
+	}
+	globalUserStore = store
+
+	// Assign a session store
+	sessionStore, err := NewFileSessionStore("./data/session.json")
+	if err != nil {
+		panic(fmt.Errorf("Error creating session store: %s", err))
+	}
+	globalSessionStore = sessionStore
+	
+	// Assign a sql database
+	db, err := NewMySQLDB("root:Letmein123@tcp(localhost:3306)/gophr")
+	if err != nil {
+		panic(err)
+	}
+	globalMySQLDB = db
+	
+	// Assign an image store
+	globalImageStore = NewDBImageStore()
+}
 
 func main() {
 	router := NewRouter()
@@ -25,6 +51,8 @@ func main() {
 	secureRouter.Handle("GET", "/sign-out", HandleSessionDestroy)
 	secureRouter.Handle("GET", "/account", HandleUserEdit)
 	secureRouter.Handle("POST", "/account", HandleUserUpdate)
+	secureRouter.Handle("GET", "/images/new", HandleImageNew)
+	secureRouter.Handle("POST", "/images/new", HandleImageCreate)
 	
 	middleware := Middleware{}
 	middleware.Add(router)
