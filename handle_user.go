@@ -76,3 +76,26 @@ func HandleUserUpdate(w http.ResponseWriter, r *http.Request, _ httprouter.Param
 	
 	http.Redirect(w, r, "/account?flash=User+Updated", http.StatusFound)
 }
+
+func HandleUserShow(w http.ResponseWriter, r *http.Request, params httprouter.Params) {
+	user, err := globalUserStore.Find(params.ByName("userID"))
+	if err != nil {
+		panic(err)
+	}
+	
+	// 404
+	if user == nil {
+		http.NotFound(w, r)
+		return
+	}
+	
+	images, err := globalImageStore.FindAllByUser(user, 0)
+	if err != nil {
+		panic(err)
+	}
+	
+	RenderTemplate(w, r, "users/show", map[string]interface{}{
+		"Images": images,
+		"User": user,
+	})
+}
